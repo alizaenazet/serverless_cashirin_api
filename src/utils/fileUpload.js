@@ -1,20 +1,12 @@
 const fs = require('fs');
 const aws = require('aws-sdk');
-aws.config.update({
-    accessKeyId:'AKIAWJ46WHK4BLDIOUVS',
-    secretAccessKey:'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',
-    region:'ap-southeast-3'
-});
+const { PutObjectCommand,S3Client,GetObjectCommand } = require('@aws-sdk/client-s3');
+const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 
-const s3 = new aws.S3({
-    apiVersion:"2023-05-28",
-    params:{
-        Bucket:"cahsierinstorage"}
-});
-
-async function uploadFile(file) {
+const s3Client = new S3Client({region:"ap-southeast-3"})
+//new S3 Config
+ async function newUploadFile(file) {
     const fileContent = fs.readFileSync(file.path); //lakukan pengambilan(baca) pada file kiriman
-    return new Promise((resolve, reject) => {
         const options = { partSize: 10 * 1024 * 1024, queueSize: 1 }; //10mb
         const params = { //params yang akan dikirimkan
           Bucket: "cahsierinstorage",
@@ -22,15 +14,32 @@ async function uploadFile(file) {
           Body: fileContent, // file
           ContentType: file.headers['content-type']
         };
-    
-        s3.upload(params, options, (err, res) => {
-          if (err) {
-            reject(err);
-          } else {
-            resolve(res);
-          }
-        });
-      });
+        try {
+          const result = await s3Client.send(new PutObjectCommand(params))
+          console.log("hasil upload response");
+          console.log(result);
+         const url = await getPresignedUrl(file.filename);
+         return url
+        } catch (error) {
+          console.log(error);
+        }
+
     }
 
-    module.exports = uploadFile
+    async function getPresignedUrl(key) {
+      const params = {
+        Bucket: 'cahsierinstorage',
+        Key: key
+      };
+    
+      try {
+        const command = new GetObjectCommand(params);
+        const url = await getSignedUrl(s3Client, command);
+        return url;
+      } catch (error) {
+        console.log(error);
+        return null;
+      }
+    }
+
+    module.exports = {newUploadFile,getPresignedUrl}

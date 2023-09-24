@@ -1,4 +1,4 @@
-const {getOrder,getAllOrders,finishOrder,createOrder} = require('../controllers/orderController');
+const {getOrder,paymentNotifications,getAllOrders,finishOrder,createOrder} = require('../controllers/orderController');
 
 const router = [
     {
@@ -9,17 +9,31 @@ const router = [
     {
         method:"GET",
         path: "/merchants/{username}/orders",
-        handler: getAllOrders
+        options:{
+            auth:"owner-user-auth",
+            handler: getAllOrders
+        }
     },
     {
         method:"PUT",
         path: "/merchants/{username}/orders/{id}/finish",
-        handler: finishOrder
+        options:{
+            auth:"owner-user-auth",
+            handler: finishOrder
+        }
     },
     {
         method:"POST",
         path: "/merchants/{id}/orders/create",
-        handler: createOrder
+        options:{
+            auth:"owner-user-auth",
+            handler: createOrder
+        }
+    },
+    {
+        method:"POST",
+        path:"/order/paymentNotifications",
+        handler: paymentNotifications
     }
 ]
 

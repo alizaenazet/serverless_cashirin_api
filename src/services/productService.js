@@ -1,73 +1,81 @@
 const sequelize = require('../config/mysql');
 const {nanoid} = require('nanoid');
-const { payloadCheck } = require('../utils/payloadcheck');
+const { payloadCheck, payloadCheckProperties } = require('../utils/payloadcheck');
+const  Boom  = require('@hapi/boom');
 
 
-async function getAll(merchantId) {
-    if(!merchantId){return false}
-    const [result,metadata] = await sequelize.query(`SELECT * FROM product WHERE merchant_id = "${merchantId}"`) 
-    if (result.length > 0) {
+async function getAll(merchantUsername) {
+    if(!merchantUsername) throw Boom.badRequest("merchant must be included")
+    const query =`
+    SELECT product.* 
+    FROM
+    product
+    JOIN 
+    merchant ON merchant.id = product.merchant_id
+    WHERE merchant.username = '${merchantUsername}'
+    ` 
+    const [result,metadata] = await sequelize.query(query)
+    if (result[0]) {
         return [...result]
     }
-    return false
+    throw Boom.badRequest("merchant not found / product not available")
 }
 
-async function get(merchantId,productId) {
-
-    if (!merchantId || !productId) {
-        return false;
+async function get(merchantUsername,productId) {
+    if (!merchantUsername || !productId) {
+        throw Boom.badRequest("params must be included")
     }
-    const result = await sequelize.query(`SELECT * FROM product WHERE merchant_id="${merchantId}" AND id="${productId}"`)
-
-    if (result.length > 0) {
+    const query = `
+    SELECT product.* 
+    FROM
+    product
+    JOIN 
+    merchant ON merchant.id = product.merchant_id
+    WHERE product.id = '${productId}' AND merchant.username = '${merchantUsername}'
+`
+const result = await sequelize.query(query)
+    if (result[0].length > 0) {
         return {...result[0]}
     }
-    return false;
+    throw Boom.notFound("product not found")
 }
 
 async function create(merchantId,body) {
-    if (!merchantId || !payloadCheck(body)) {
-        return false;
-    }
+    if (!merchantId) throw Boom.badRequest("params must be included")
     const productId = nanoid();
-    const {prdouct_name="",description="",price,category_id=""} = body;
-    if (!prdouct_name || !price) {
-        return false
-    }
+    const {prdouct_name,description,price,category_id} = payloadCheck(body,["prdouct_name","description","price","category_id"],"properties must be included")
     const query = `
     INSERT INTO product (id,name,description,price,category_id,merchant_id,stock) 
     VALUES ("${productId}","${prdouct_name}","${description}","${price}","${category_id}","${merchantId}",0) 
     `
-    const [result,metadata] = await sequelize.query(query)
-
+    console.log("cok");
+        const [result,metadata] = await sequelize.query(query)
+        .catch((error)=>{
+            if (error.parent.code == "ER_NO_REFERENCED_ROW_2") {
+             throw Boom.notFound("merchant not found")   
+            }
+        })
     if (result === 0) {
         return {product_id:productId};
     }
-    return false
-    
+    throw Boom.badImplementation("create fail")
 }
 
 async function remove(merchantId,productId) {
-    
     const [result,metadata] = await sequelize.query(`DELETE FROM product WHERE id="${productId}" AND merchant_id="${merchantId}"`)
-
     if (result.affectedRows > 0) {
         return true;
     }
-    return false
+    throw Boom.badRequest("product not available")
 }
 
 async function edit(merchantId,productId,body) {
-    if (!merchantId||!productId || !payloadCheck(body)) {
-        return false;
-    }
-
+    if (!merchantId||!productId) throw Boom.badRequest("params must be included")
     const fields = ["name", "description", "price", "category_name", "merchant_id", "stock"];
     const temp = Object.keys(body);
     const isValid = temp.every(field => fields.includes(field));
-
     if (!isValid) {
-        return false;
+        throw Boom.badRequest("properties invalid")
       }
     
       let updateQuery = "UPDATE product SET ";
@@ -81,7 +89,7 @@ async function edit(merchantId,productId,body) {
         }
       }
       if (!fieldsQuery) {
-        return false
+        throw Boom.badRequest("properties not included")
       }
       const query = updateQuery + fieldsQuery + conditionQuery;
       const [result, metadata] = await sequelize.query(query);
@@ -89,22 +97,18 @@ async function edit(merchantId,productId,body) {
         return { productId, ...body };
       }
     
-      return false;
-  
-
+    throw Boom.badRequest("nothing updated")
 }
 
 async function reStock(merchantId,productId,body) {
-    if (!merchantId || !productId || !body) {
-        return false;
-    }
-    const {stock=false} = body
-    if (!stock) {return false};
+    if (!merchantId || !productId) throw Boom.badRequest("params must be included");
+    const {stock} = payloadCheckProperties(body,["stock"],"must be included")
     const result = await sequelize.query(`UPDATE product SET stock="${stock}" WHERE merchant_id="${merchantId}" AND id="${productId}"`)
-    if (result) {
+    console.log("result");
+    if (result[0].affectedRows > 0) {
         return {merchantId,productId,stock}
     }
-    return false
+    throw Boom.badRequest("merchant/product `id` invalid")
 }
 
 module.exports = {getAll,get,create,remove, edit,reStock}

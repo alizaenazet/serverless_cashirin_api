@@ -5,27 +5,43 @@ const router = [
     {
         method:"POST",
         path:"/merchants/{username}/admins/login",
-        handler:loginAdmin
+        options:{
+            auth:"merchantAuth",
+            handler:loginAdmin
+        }
     },
     {
         method:"POST",
         path:"/merchants/{username}/admins/enroll",
-        handler:adminRegister
+        options:{
+            auth:"ownerAuth",
+            handler:adminRegister
+        }
     },
     {
         method:"DELETE",
         path:"/merchants/{username}/admins/{id}",
-        handler:adminDelete
+        options:{
+            auth:"owner-admin-auth",
+            handler:adminDelete
+        }
+        
     },
     {
         method:"PUT",
         path:"/merchants/{username}/admins/{id}",
-        handler:adminEdit
+        options:{
+            auth:"owner-admin-auth",
+            handler:adminEdit
+        }
     },
     {
         method:"GET",
         path:"/merchants/{username}/admins/{id}",
-        handler:getAdmin
+        options:{
+            auth:"owner-admin-auth",
+            handler:getAdmin
+        }
     }
 
 ]

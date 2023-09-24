@@ -1,28 +1,36 @@
+const Boom = require('@hapi/boom');
+const Jwt = require('@hapi/jwt');
 const {
     getMerchant,
+    logout,
+    deleteImage,
+    uploadImage,
     login,
     register,
     editProfile,
     getProfileAccount,
     uploadLogo,
     uploadBaner} = require('../services/merchantServices');
-const uploadFile = require('../utils/fileUpload');
+const {newUploadFile} = require('../utils/fileUpload');
 const {payloadCheck} = require('../utils/payloadcheck');
+const catchError = require('../utils/catchError');
+const { response } = require('@hapi/hapi/lib/auth');
+
+async function checkMerchantAuth(username,token) {
+    const user = token.credentials.user;
+    const merchant = await getMerchant(username)
+    if (!merchant) throw Boom.badRequest("invalid merchant username");
+        if (user != merchant.owner) {
+            throw Boom.unauthorized("merchant not allowed")        
+        }
+        return true;
+}
 
 async function merchantLogin(req, h) {
-
+    const payload = req.payload;
     const username = req.params.username;
-    let password = await payloadCheck(req.payload);
-    const result = await login(username, password.password);
-    const isSucces = result;
-    if (!isSucces) {
-        const response = h.response({
-            status: "rejected"
-        })
-        response.code(401);
-        return response
-    }
-
+    try {
+        const result = await login(username,payload);
     const response = h.response({
         status: "succes",
         items: {
@@ -32,25 +40,15 @@ async function merchantLogin(req, h) {
     response.code(202);
     return response;
 
+    } catch (error) {
+       return catchError(error);
+    }
 }
 
 async function merchantRegister(req, h) {
-    const {
-        username,
-        password,
-        merchant_name
-    } = await payloadCheck(req.payload);
-    const result = await register(username, password, merchant_name);
-    const isSucces = result;
-    console.log(isSucces);
-    if (!isSucces) {
-        const response = h.response({
-            status: "validation failed"
-        })
-        response.code(422)
-        return response;
-    }
-
+    const payload = req.payload;
+    try {
+        const result = await register(payload);
     const response = h.response({
         status: "created",
         items: {
@@ -58,70 +56,51 @@ async function merchantRegister(req, h) {
         }
     })
     response.code(201);
-
     return response;
+    } catch (error) {
+        console.log(error);
+        return catchError(error);
+    }
 }
 
 async function merchantUploadLogo(req, h) {
-    const username = req.params.username;
-    const isAvailable = getMerchant(username);
-    if (isAvailable) {
-        try {
-            const responseFile = await uploadFile(req.payload.file);
-            const url =  { fileUrl: responseFile.Location };
-            uploadLogo(username,url.fileUrl)
+    const token = req.auth;
+    const {username} = req.params
+    try {
+        checkMerchantAuth(username,token)
+            const responseFile = await newUploadFile(req.payload.file);
+            const url =  responseFile;
+            uploadLogo(username,url)
             const response = h.response({
                 status:"uploaded",
-                "logo_url":url.fileUrl,
+                "logo_url":url,
             })
             response.code(201)
             return response;
-    
           } catch (err) {
-            const response = h.response({
-                "status":"fail"
-            })
-            response.code(422);
-            return response
+            // console.log(err);
+            return catchError(err);
         }
-    }
-    const response = h.response({
-        "status":"Merchant not found"
-    })
-    response.code(422);
-    return response
   };
 
   async function merchantUploadBaner(req,h) {
-    const username = req.params.username;
-    const isAvailable = getMerchant(username)
-    if (isAvailable) {
-        try {
-            const responseFile = await uploadFile(req.payload.file);
-            const url = {fileUrl : responseFile.Location};
-             await uploadBaner(username,url.fileUrl);
+      const {username} = req.params;
+      const token = req.auth;
+      try {
+        checkMerchantAuth(username,token)
+            const responseFile = await newUploadFile(req.payload.file);
+             const url = responseFile
+             uploadBaner(username,url);
             const response = h.response({
                 status:"uploaded",
-                baner_url:url.fileUrl
+                baner_url:url
             })
             response.code(201)
             return response;
         } catch (error) {
-            const response = h.response({
-                status:"fail",
-            })
-            response.code(422);
-            return response;
+            return catchError(error);
         }
     }
-    const response = h.response({
-        status:"merchant not found",
-    })
-    response.code(422);
-    return response;
-    
-  }
-  
   async function getMerchantProfileAccount(req,h) {
         const username = req.params.username;
         try {
@@ -137,54 +116,77 @@ async function merchantUploadLogo(req, h) {
                 response.code(202)
                 return response;
             }
-    
-            const response = h.response({
-                status:"Not Merchant found"
-            })
-            response.code(422)
-            return response
+           throw Boom.badRequest("merchant not found")
             
         } catch (error) {
-            const response = h.response({
-                status:"error",
-                message:"make sure send request path/body"
-            })
-            response.code(400)
-            return response
+            return catchError(error)
         }
 
 
   }
 
   async function editMerchantProfile(req,h) {
-    const merchantName = req.params.username;
+    const username = req.params.username;
     const body = req.payload;
+    const token = req.auth;
     try {
-        const result = await editProfile(merchantName,body);
-        if (result) {
+        await checkMerchantAuth(username,token)
+        const result = await editProfile(username,body);
             const response = h.response({
                 status:"accepted",
                 data:{...result}
             })
             response.code(202)
             return response
-        }
-        const response = h.response({
-            status:"fail"
-        })
-        response.code(422)
-        return response    
     } catch (error) {
-        console.log(error);
-        const response = h.response({
-            status:"some thing wrong"
-        })
-        response.code(400)
-        return response
+        return catchError(error)
     }
     
   }
+
+  async function logoutMerchant(req,h) {
+    const token = req.auth.artifacts
+    try {
+        const result = await logout(token);
+    const response = h.response()
+    response.code(204);
+    return response;
+    } catch (error) {
+        console.log(error);
+        return catchError(error);
+    }
+  }
   
+
+  async function uploadImageCollection(req,h) {
+    const {username} = req.params;
+    const token = req.auth;;
+    try {
+        checkMerchantAuth(username,token)
+        const url = await newUploadFile(req.payload.file);
+        await uploadImage(username,url)
+        const response = h.response()
+        response.code(204)
+        return response;
+    } catch (error) {
+        return catchError(error)
+    }
+  }
+
+async function deleteImageCollection(req,h) {
+    const {image_url} = req.payload;
+    const username = req.params.username;
+    try {
+        await deleteImage(username,image_url)
+        const response = h.response();
+        response.code(204);
+        return response;
+    } catch (error) {
+        console.log(error);
+        return catchError(error)
+    }
+    
+}
 
 module.exports = {
     merchantLogin,
@@ -192,5 +194,8 @@ module.exports = {
     merchantUploadLogo,
     getMerchantProfileAccount,
     merchantUploadBaner,
-    editMerchantProfile
+    editMerchantProfile,
+    logoutMerchant,
+    uploadImageCollection,
+    deleteImageCollection
 };

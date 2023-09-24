@@ -4,17 +4,26 @@ const router = [
     {
         method:"POST",
         path:"/merchants/{username}/owner/login",
-        handler: ownerLogin
+        options:{
+            handler: ownerLogin,
+            auth:'merchantAuth'
+        }
     },
     {
         method:"POST",
         path:"/merchants/{username}/owner/create",
-        handler: ownerRegister
+        options:{
+            handler: ownerRegister,
+            auth:'merchantAuth'
+        }
     },
     {
         method:"PUT",
         path:"/merchants/{username}/owner",
-        handler: ownerEdit
+        options:{
+            handler: ownerEdit,
+            auth:'ownerAuth'
+        }
     }
 ]
 

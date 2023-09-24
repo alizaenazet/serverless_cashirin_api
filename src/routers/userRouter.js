@@ -4,27 +4,42 @@ const router = [
     {
         method:"POST",
         path:"/merchants/{username}/users/login",
-        handler:userLogin
+        options:{
+            auth:"merchantAuth",
+            handler:userLogin
+        }
     },
     {
         method:"POST",
         path:"/merchants/{username}/users/enroll",
-        handler:userSingup
+        options:{
+            auth:"ownerAuth",
+            handler:userSingup
+        }
     },
     {
         method:"DELETE",
         path:"/merchants/{username}/users/{id}",
-        handler:userDelete
+        options:{
+            auth:"owner-user-auth",
+            handler:userDelete
+        }
     },
     {
         method:"PUT",
         path:"/merchants/{username}/users/{id}",
-        handler:userEdit
+        options:{
+            auth:"owner-user-auth",
+            handler:userEdit
+        }
     },
     {
         method:"GET",
         path:"/merchants/{username}/users/{id}",
-        handler:userGet
+        options:{
+            auth:"allRole",
+            handler:userGet
+        }
     }
 ]
 

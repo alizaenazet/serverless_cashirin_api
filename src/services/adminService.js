@@ -1,14 +1,16 @@
 
 const sequelize = require('../config/mysql');
 const {nanoid} = require('nanoid');
-const { payloadCheck } = require('../utils/payloadcheck');
+const { payloadCheck, payloadCheckProperties } = require('../utils/payloadcheck');
+const Boom  = require('@hapi/boom');
+const { generateTokenFb } = require('../config/firebaseAdmin');
 
 
 
 
 async function register(merchantUsername,body) {
     const {username,password,firstname,lastname,date_of_birth,gender,phone} = body;
-    if(!payloadCheck(body)){return false}
+    payloadCheckProperties(body,["username","password","firstname","lastname","date_of_birth","gender","phone"],"must be included")
     const id = nanoid();
     const query = 
     `INSERT INTO account (id,username,first_name,last_name,password,birthdate,phone,gender_type,role_name,merchant_username)
@@ -23,52 +25,49 @@ async function register(merchantUsername,body) {
             role: "admin"
         }
     }
-    return false
+    throw Boom.badImplementation("Register fail")
     }
 
     async function login(merchantUsername,body) {
-        if (!merchantUsername || !payloadCheck(body)) {
-            return false
-        }
-        console.log("tes cuy");
-        const username = body.username;
-        const password =body.password;
+        if (!merchantUsername) throw Boom.badRequest("username not included");
+        const {username,password} =  payloadCheckProperties(body,["username","password"],"must be included");
         const [result,metadata] = await sequelize.query(`SELECT * FROM account WHERE merchant_username="${merchantUsername}" AND username="${username}" AND password="${password}" AND role_name="admin"`)
         if (result.length > 0) {
-            return {...result[0]}
+            const account = result[0]
+            const token = await generateTokenFb(account.id,"admin")
+            return {
+                token:token,
+                account:{...result[0]}
+            }
         }
-        return false
+        throw Boom.unauthorized("invalid username/password")
     }
 
 
-    async function remove(merchantUsername,adminId) {
-        if (!merchantUsername || !adminId) {
-            return false
-        }
+    async function remove(params) {
+        const {username,id} = payloadCheckProperties(params,["username","id"],"must be included")
+        merchantUsername=username
+        adminId=id
         const [result,metadata] = await sequelize.query(`DELETE FROM account WHERE merchant_username="${merchantUsername}" AND id="${adminId}"`)
         if (result.affectedRows > 0) {
             return true
         }
-        return false
+        throw Boom.badRequest("admin not found")
     }
 
-    async function edit(merchantUsername,adminId,body) {
-        if (!merchantUsername||!adminId||!payloadCheck(body)) {
-            return false
-        }
-
-
-    const fields = ["first_name", "last_name", "username", "password", "birthdate", "phone", "gender_type", "merchant_username"];
+    async function edit(params,body) {
+        const {username,id} = payloadCheckProperties(params,["username","id"],"params not included");
+    const fields = ["first_name", "last_name", "password", "birthdate", "phone", "gender_type"];
     const temp = Object.keys(body);
     const isValid = temp.every(field => fields.includes(field));
   
     if (!isValid) {
-      return false;
+        throw Boom.badRequest("invalid properties")
     }
   
     let updateQuery = "UPDATE account SET ";
     let fieldsQuery = "";
-    let conditionQuery = ` WHERE merchant_username = "${merchantUsername}" AND id="${adminId}" AND role_name="admin"`;
+    let conditionQuery = ` WHERE merchant_username = "${username}" AND id="${id}" AND role_name="admin"`;
   
     for (const [prop, value] of Object.entries(body)) {
       fieldsQuery = fieldsQuery + ` ${prop}="${value}"`;
@@ -80,23 +79,21 @@ async function register(merchantUsername,body) {
     const query = updateQuery + fieldsQuery + conditionQuery;
     const [result, metadata] = await sequelize.query(query);
     if (result !== 0 && metadata && metadata.affectedRows > 0) {
-      return { adminId, ...body };
+      return { id, ...body };
     }
-  
-    return false;
+    throw Boom.notImplemented("nothing is updated")
 
     }
 
-    async function get(merchantUsername,adminId) {
-        if (!merchantUsername || !adminId) {
-            return false
-        }
+    async function get(params) {
+        const {username,id} = payloadCheckProperties(params,["username","id"],"params not included")
+        const merchantUsername=username
+        const adminId=id
         const [result,metadata] = await sequelize.query(`SELECT * FROM account WHERE id="${adminId}" AND merchant_username="${merchantUsername}" AND role_name="admin"`)
         if (result.length > 0) {
             return {...result[0]}
         }
-        return false;
-
+    throw Boom.badRequest("admin account not found")
     }
 
     module.exports = {register,login,remove,edit,get}

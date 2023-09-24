@@ -1,3 +1,6 @@
+const Boom = require('@hapi/boom');
+
+
 
 function payloadCheck(payload,...optionalProperties) {
     if (!payload) {return false}
@@ -11,4 +14,18 @@ function payloadCheck(payload,...optionalProperties) {
     return payload;
 }
 
-module.exports = {payloadCheck}
+function payloadCheckProperties(payload,properties,message) {
+    let notRequiredProperties = [];
+    for (let i = 0; i < properties.length; i++) {
+        const propertyName = properties[i];
+        if (!payload.hasOwnProperty(propertyName)) {
+            notRequiredProperties.push(propertyName)
+        }
+      }
+      if (notRequiredProperties.length > 0 ) {
+        throw Boom.badRequest(notRequiredProperties.join(", ") + " " + message)
+      }
+      return payload;
+}
+
+module.exports = {payloadCheck,payloadCheckProperties}

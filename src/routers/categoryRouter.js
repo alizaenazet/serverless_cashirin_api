@@ -14,22 +14,34 @@ const router = [
     {
         method : 'PUT',
         path: '/merchants/{id}/categories/{categoryId}',
-        handler : editMerchant
+        options:{
+            auth:"owner-admin-auth",
+            handler : editMerchant
+        }
     },
     {
         method : 'POST',
         path: '/merchants/{id}/categories',
-        handler : createCategory
+        options:{
+            auth:"owner-admin-auth",
+            handler : createCategory
+        }
     },
     {
         method : 'DELETE',
         path: '/merchants/{id}/categories/{categoryId}',
-        handler : deleteCategory
+        options:{
+            auth:"owner-admin-auth",
+            handler : deleteCategory
+        }
     },
     {
         method : 'POST',
         path:'/merchants/{id}/categories/{categoryId}/add',
-        handler : addProductCategory
+        options:{
+            auth:"owner-admin-auth",
+            handler : addProductCategory
+        }
     }
 
 ]

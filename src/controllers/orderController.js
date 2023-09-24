@@ -1,30 +1,19 @@
-const {get,getAll,create,finish} = require('../services/orderService');
+const {get,getAll,paymentNotificationsHandle,create,finish} = require('../services/orderService');
+const catchError = require('../utils/catchError');
 
 async function getOrder(req,h) {
-    const merchantUsername = req.params.username;
-    const orderId = req.params.id;
+    const params = req.params;
     try {
-        const result = await get(merchantUsername,orderId);
-    if (result) {
+        const result = await get(params);
         const response = h.response({
             status:"succes",
             data:{...result},
         })
-        response.code(200);
+        response.code(202);
         return response;
-    }
-    const response = h.response({
-        status:"fail"
-    })
-    response.code(404)
-    return response;
 } catch (error) {
     console.log(error);
-    const response = h.response({
-        status:"something wrong"
-    })
-    response.code(403)
-    return response;
+    return catchError(error)
     }
 
 }
@@ -34,50 +23,29 @@ async function getAllOrders(req,h) {
     const merchantUsername =  req.params.username;
     try {
         const result = await getAll(merchantUsername);
-    if (result) {
         const response = h.response({
             status: 'succes',
             data:result
         })
         response.code(200);
         return response;
-    }
-    const response  = h.response({
-        status:"fail"
-    })
-    response.code(404)
-    return response;
 } catch (error) {
     console.log(error);
-    const response  = h.response({
-        status:"something wrong"
-    })
-    response.code(403)
-    return response;
+    return catchError(error);
     }
 }
 
 async function finishOrder(req,h) {
-    const merchantUsername = req.params.username;
-    const userId = req.params.id;
-    try {
-        const result = await finish(merchantUsername,userId);
-    if (result) {
+    const params = req.params;
+try{
+    await finish(params);
         const response = h.response()
         response.code(204)
         return response;
-    }
-    const response = h.response();
-    response.code(400)
-    return response;
 } catch (error) {
     console.log(error);
-    const response = h.response({
-        status:"something wrong"
-    });
-    response.code(403)
-    return response;
-    }
+    return catchError(error)
+}
 }
 
 async function createOrder(req,h) {
@@ -85,30 +53,31 @@ async function createOrder(req,h) {
     const body = req.payload;
     try {
     const result = await create(merchantId,body);
-    console.log(result);
-    if (result) {
         const response = h.response({
             status:"created",
             data:{...result}
         })
         response.code(201)
         return response;
-    }
-    const response = h.response({
-        status:"fail"
-    })
-    response.code(400)
-    return response;
 } catch (error) {
     console.log(error);
-    const response = h.response({
-        status:"something wrong"
-    })
-    response.code(403)
-    return response;
+    return catchError(error)
     }
     
 }
 
+async function paymentNotifications(req,h) {
+    const body = req.payload;
+    try {
+        const result = await paymentNotificationsHandle(body);
+    const response = h.response()
+    response.code(204);
+    return response;
+    } catch (error) {
+        console.log(error);
+        return catchError(error)
+    }
+}
 
-module.exports={getOrder,getAllOrders,finishOrder,createOrder}
+
+module.exports={getOrder,getAllOrders,finishOrder,createOrder,paymentNotifications}

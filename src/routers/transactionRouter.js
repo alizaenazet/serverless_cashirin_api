@@ -4,12 +4,18 @@ const router = [
     {
         method:"GET",
         path:"/merchants/{id}/transactions/{date}",
-        handler:getTransaction
+        options:{
+            auth:"owner-admin-auth",
+            handler:getTransaction
+        }
     },
     {
         method:"GET",
         path:"/merchants/{id}/transactions",
-        handler:getTransactions
+        options:{
+            auth:"owner-admin-auth",
+            handler:getTransactions
+        }
     }
 ]
 

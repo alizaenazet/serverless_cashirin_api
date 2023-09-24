@@ -1,6 +1,7 @@
 const sequelize = require('../config/mysql');
 const {nanoid} = require('nanoid');
 const { payloadCheck } = require('../utils/payloadcheck');
+const  Boom  = require('@hapi/boom');
 
     async function getOrder(date,merchantId){
         const query = `
@@ -15,24 +16,20 @@ const { payloadCheck } = require('../utils/payloadcheck');
 
      async function get(merchantId,date) {
         if (!merchantId || !date) {
-             return false;
+             throw Boom.badRequest("params must be included")
             }
         const result = await getOrder(date,merchantId)
-        console.log(result);
         if (result) {
             return result
         }
-
-        return false;
+        throw Boom.notFound("order not found")
      }
 
      async function getAll(merchantId) {
-        if (!merchantId) {
-            return false;
-        }
+        if (!merchantId) throw Boom.badRequest("merchant params must be included")
         const [result,metadata] = await sequelize.query(`SELECT date FROM transaction WHERE merchant_id="${merchantId}"`)
         if (!result) {
-            return false;
+            throw Boom.badRequest("transaction not available")
         }
         let transactions = [];
         for(const element of result){
@@ -40,12 +37,10 @@ const { payloadCheck } = require('../utils/payloadcheck');
             transactions.push(orders)
         }
 
-        if (transactions) {
+        if (transactions.length > 0) {
             return transactions
-            
         }
-        
-        return false;
+        throw Boom.badRequest("invalid merchant");
      }
 
 

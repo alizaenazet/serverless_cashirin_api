@@ -4,34 +4,46 @@ const router = [
 
     {
         method:'GET',
-        path:'/merchants/{id}/products',
+        path:'/merchants/{username}/products',
         handler: getProducts
     },
     {
         method:'GET',
-        path:'/merchants/{Id}/products/{productId}',
+        path:'/merchants/{username}/products/{productId}',
         handler: getProduct
     },
     
     {
         method:'POST',
         path:'/merchants/{id}/products',
-        handler: createProduct
+        options:{
+            auth:"owner-admin-auth",
+            handler: createProduct
+        }
     },
     {
         method:'DELETE',
         path:'/merchants/{id}/products/{productId}',
-        handler: deleteProduct
+        options:{
+            auth:"owner-admin-auth",
+            handler: deleteProduct
+        }
     },
     {
         method:'PUT',
         path:'/merchants/{id}/products/{productId}',
-        handler: editProduct
+        options:{
+            auth:"owner-admin-auth",
+            handler: editProduct
+        }
     },
     {
         method:'PUT',
         path:'/merchants/{id}/products/{productId}/updatestock',
-        handler: updateProductStock
+        options:{
+            auth:"owner-admin-auth",
+            handler: updateProductStock
+        }
     }
 
 

@@ -1,32 +1,20 @@
 const {getAll,remove,get,edit,create,addProduct} = require('../services/categoryService');
+const catchError = require('../utils/catchError');
     
 
     async function getAllCategories(req,h) {
         const merchantId = req.params.id;
         try {
             const result = await getAll(merchantId);
-        if (result) {
             const response = h.response({
                 status:"succes",
                 data:result
             })
             response.code(202)
             return response;
-        }
-        const response = h.response({
-            status:"fail"
-        })
-        response.code(400)
-        return response;
-        
     } catch (error) {
         console.log(error);
-        const response = h.response({
-            status:"something wrong"
-        })
-        response.code(403)
-        return response;
-        
+        return catchError(error)
         }
     }
 
@@ -35,30 +23,16 @@ const {getAll,remove,get,edit,create,addProduct} = require('../services/category
         const categoryId = req.params.categoryId
         try {
             const result = await get(merchantId,categoryId)
-        if (result) {
             const response = h.response({
                 status:"succes",
                 data:{...result}
             })
-            response.code(200)
+            response.code(202)
             return response;
-        }
-        const response = h.response({
-            status:"fail"
-        })
-        response.code(400)
-        return response;
     } catch (error) {
         console.log(error);
-        const response = h.response({
-            status:"something wrong"
-        })
-        response.code(403)
-        return response;
-
+        return catchError(error)
         }
-
-        
     }
 
     async function editMerchant(req,h) {
@@ -67,24 +41,13 @@ const {getAll,remove,get,edit,create,addProduct} = require('../services/category
         const body = req.payload;
         try {
             const result = await edit(merchantId,category,body)
-        if (result) {
             const response = h.response({
             })
             response.code(204)
             return response;
-        }
-        const response = h.response({
-            status:"fail"
-        })
-        response.code(400)
-        return response;
     } catch (error) {
         console.log(error);
-        const response = h.response({
-            status:"something wrong"
-        })
-        response.code(403)
-        return response;
+        return catchError(error)
         }
     }
 
@@ -94,50 +57,28 @@ const {getAll,remove,get,edit,create,addProduct} = require('../services/category
         const body = req.payload;
         try {
             const result = await create(merchanatId,body);
-        if (result) {
             const response = h.response({
                 status:"succes",
                 data:{...result}
             })
             response.code(201)
             return response
-        }
-        const response = h.response({
-            status:"fail"
-        })
-        response.code(400)
-        return response
     } catch (error) {
         console.log(error);
-        const response = h.response({
-            status:"something wrong"
-        })
-        response.code(403)
-        return response
+        return catchError(error)
         }
     }
     async function deleteCategory(req,h) {
         const merchantId = req.params.id;
         const categoryId = req.params.categoryId;
         try {
-            const result = await remove(merchantId,categoryId)
-        if (result) {
+         await remove(merchantId,categoryId)
             const response = h.response()
             response.code(204)
             return response;
-        }
-        const response = h.response({
-            status:"fail"
-        })
-        response.code(400)
-        return response;
     } catch (error) {
         console.log(error);
-        const response = h.response({
-            status:"something wrong"
-        })
-        response.code(403)
-        return response;
+       return catchError(error)
         }
         
     }
@@ -147,23 +88,12 @@ const {getAll,remove,get,edit,create,addProduct} = require('../services/category
         const categoryId = req.params.categoryId;
         const body = req.payload;
         try {
-            const result = await addProduct(merchantId,categoryId,body)
-        if(result){
+        await addProduct(merchantId,categoryId,body)
             const response = h.response()
             response.code(204)
             return response;
-        }
-        const response = h.response({
-            status:"fail"
-        })
-        response.code(400)
-        return response;
     } catch (error) {
-            const response = h.response({
-                status:"something wrong"
-            })
-            response.code(403)
-            return response;
+            return catchError(error)
         }
     }
 
